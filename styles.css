@@ -1,0 +1,33 @@
+.city {
+    color: brown;
+    font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
+    font-weight: bold;
+    font-size: 50px;
+}
+
+.card1 {
+
+    background-color: aliceblue;
+    height: 200px;
+    border-radius: 45px;
+}
+
+.form-label {
+    color: rgba(247, 247, 242, 0.933);
+    font-size: 16px;
+}
+
+.card2 {
+    border-radius: 45px;
+    background-color: aliceblue;
+}
+
+.card3 {
+    background-color: aliceblue;
+    border-radius: 45px;
+}
+
+.card4 {
+    background-color: aliceblue;
+    border-radius: 45px;
+}
