@@ -32,7 +32,7 @@ const complaintTableBody = document.getElementById("my-complaints-list");
 let unsubscribeComplaints = null;
 const BACKEND_URL = (window.location.hostname === '127.0.0.1' || window.location.port === '5500') 
   ? 'http://localhost:3000' 
-  : window.location.origin;
+  : 'https://city-service-portal-cd80.onrender.com';
 
 // Submission Logic
 if (form) {
