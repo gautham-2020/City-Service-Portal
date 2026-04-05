@@ -8,18 +8,12 @@ const PORT = process.env.PORT || 3000;
 
 console.log(">>> BOOTING SERVER...");
 
-// 1. GLOBAL CORS & PREFLIGHT HANDLER (Immediate response)
-app.use((req, res, next) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
-    res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type, Authorization');
-    res.setHeader('Access-Control-Allow-Credentials', true);
-    
-    if (req.method === 'OPTIONS') {
-        return res.status(204).send();
-    }
-    next();
-});
+// 1. GLOBAL CORS & PREFLIGHT HANDLER
+app.use(cors({
+    origin: '*', // Allow all origins like Netlify
+    methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'PATCH', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
 
 // 2. Serve static files (Frontend)
 app.use(express.static(__dirname));
@@ -32,7 +26,6 @@ app.get('/health', (req, res) => {
 
 // 3. Middlewares
 app.use(express.json());
-app.use(cors());
 
 // Initialize Nodemailer
 const transporter = nodemailer.createTransport({
