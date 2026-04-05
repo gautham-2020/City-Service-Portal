@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const { Resend } = require('resend');
+const nodemailer = require('nodemailer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -34,8 +34,14 @@ app.get('/health', (req, res) => {
 app.use(express.json());
 app.use(cors());
 
-// Initialize Resend
-const resend = new Resend(process.env.RESEND_API_KEY || 're_SEfpiMZV_AKoKFev5jWHA2qutgy4uLYLi');
+// Initialize Nodemailer
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
+});
 
 // Endpoint to send emails
 app.post('/send-email', async (req, res) => {
@@ -51,15 +57,15 @@ app.post('/send-email', async (req, res) => {
     let subjectPrefix = 'Complaint Registered';
 
     if (category === 'Water Problem') {
-        targetEmail = 'watertests12@gmail.com, ' + toEmail;
+        targetEmail = 'watertests12@gmail.com';
         intendedDepartment = 'watertests12@gmail.com (Water Department)';
         subjectPrefix = 'Urgent: Water Issue';
     } else if (category === 'Road Issue') {
-        targetEmail = 'roadtests12@gmail.com, ' + toEmail;
+        targetEmail = 'roadtests12@gmail.com';
         intendedDepartment = 'roadtests12@gmail.com (Road Department)';
         subjectPrefix = 'Urgent: Road Damage Alert';
     } else {
-        targetEmail = 'electrictytest12@gmail.com, ' + toEmail;
+        targetEmail = 'electrictytest12@gmail.com';
         intendedDepartment = 'electrictytest12@gmail.com (Electricity Department)';
         subjectPrefix = 'Urgent: Power/Electricity Fault';
     }
@@ -119,20 +125,15 @@ app.post('/send-email', async (req, res) => {
                 </div>
             `;
 
-        const { data, error } = await resend.emails.send({
-            from: 'CityPortal <onboarding@resend.dev>',
-            to: targetEmail.split(',').map(e => e.trim()),
+        // Send email with Nodemailer
+        const info = await transporter.sendMail({
+            from: `"City Service Portal" <${process.env.EMAIL_USER}>`,
+            to: targetEmail.split(',').map(e => e.trim()), 
             subject: `${subjectPrefix} - #${complaintId} (${title})`,
             html: emailContent,
         });
 
-        if (error) {
-            console.error('Resend Error:', error);
-            const errorMessage = error.message || (typeof error === 'string' ? error : JSON.stringify(error));
-            return res.status(500).json({ error: errorMessage });
-        }
-
-        res.status(200).json({ success: true, data });
+        res.status(200).json({ success: true, messageId: info.messageId });
     } catch (error) {
         console.error('Unexpected Internal Error:', error);
         res.status(500).json({ error: `Internal Server Error: ${error.message}` });
