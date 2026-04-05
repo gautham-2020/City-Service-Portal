@@ -10,7 +10,7 @@ console.log(">>> BOOTING SERVER...");
 
 // 1. GLOBAL CORS & PREFLIGHT HANDLER
 app.use(cors({
-    origin: '*', // Allow all origins like Netlify
+    origin: ['https://cityserviceportal.netlify.app', 'https://city-portal-service.netlify.app', 'http://127.0.0.1:5500', 'http://localhost:5500', 'https://city-service-portal-cd80.onrender.com'], 
     methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
