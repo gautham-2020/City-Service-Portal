@@ -30,6 +30,9 @@ const form = document.getElementById("complaintForm");
 const complaintTableBody = document.getElementById("my-complaints-list");
 
 let unsubscribeComplaints = null;
+const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:3000'
+  : 'https://my-backend-production-31b5.up.railway.app';
 
 // Submission Logic
 if (form) {
@@ -52,10 +55,8 @@ if (form) {
 
     try {
 
-      // ==================================
       // 1️⃣ AUTO INCREMENT COUNTER
-      // ==================================
-
+      console.log("Step 1: FETCHING/UPDATING COUNTER...");
       const counterRef = doc(db, "counters", "complaintCounter");
       const counterSnap = await getDoc(counterRef);
 
@@ -77,10 +78,8 @@ if (form) {
       }
 
 
-      // ==================================
       // 2️⃣ FILE UPLOAD (IF EXISTS)
-      // ==================================
-
+      console.log("Step 2: FILE UPLOAD (IF EXISTS)...");
       let fileURL = "";
 
       if (file) {
@@ -96,9 +95,8 @@ if (form) {
       }
 
 
-      // ==================================
       // 3️⃣ SAVE COMPLAINT TO FIRESTORE
-      // ==================================
+      console.log("Step 3: SAVING COMPLAINT TO FIRESTORE...");
 
       await addDoc(collection(db, "complaints"), {
         userId: userEmail, // Track who submitted the complaint using their email address
@@ -112,17 +110,22 @@ if (form) {
         createdAt: serverTimestamp()
       });
 
-      // ==================================
-      // 4️⃣ SEND CONFIRMATION EMAIL
-      // ==================================
+      console.log("SUCCESS: Saved to Firestore with ID:", newId);
+      alert(`✅ Complaint saved to the database! ID: ${newId}. Now sending email notification...`);
 
+      // 4️⃣ SEND CONFIRMATION EMAIL
+      console.log("Step 4: SENDING BACKEND EMAIL VIA:", `${BACKEND_URL}/send-email`);
       let emailSent = false;
       try {
-        const response = await fetch('http://localhost:3000/send-email', {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
+        const response = await fetch(`${BACKEND_URL}/send-email`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
+          signal: controller.signal,
           body: JSON.stringify({
             toEmail: userEmail,
             complaintId: newId,
@@ -133,21 +136,34 @@ if (form) {
             status: "Pending"
           })
         });
-        
+
+        clearTimeout(timeoutId);
+
         if (!response.ok) {
-           throw new Error("Backend email response not ok");
+          let backendErrorMessage = "Unknown error";
+          try {
+            const errorData = await response.json();
+            backendErrorMessage = errorData.error;
+          } catch (e) {
+            backendErrorMessage = `Server Error: ${response.status} ${response.statusText}`;
+          }
+          throw new Error(backendErrorMessage);
         }
         console.log("Email notification sent successfully.");
         emailSent = true;
       } catch (emailError) {
         console.error("Error sending email notification:", emailError);
-        alert("⚠️ Complaint saved, but backend server is offline or failed to send email. Ensure Node is running on port 3000!");
+        alert(`⚠️ Backend server issue!
+Error: ${emailError.message}
+Target URL: ${BACKEND_URL}/send-email
+Please ensure the backend is running and CORS is allowed.`);
       }
 
       if (emailSent) {
-        alert("✅ Complaint submitted and email sent successfully! ID: " + newId);
+        console.log("SUCCESS: Backend email sent.");
+        alert("📧 Email notification sent successfully to " + userEmail);
       }
-      
+
       form.reset();
 
       // Switch view to dashboard to see the new complaint

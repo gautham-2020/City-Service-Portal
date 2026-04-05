@@ -46,6 +46,8 @@ async function loadComplaints() {
   //const querySnapshot = await getDocs(collection(db, "complaints"));
 
   table.innerHTML = "";
+  
+  let index = 1;
 
   querySnapshot.forEach((docSnap) => {
 
@@ -54,7 +56,7 @@ async function loadComplaints() {
     // Use data-id attribute and class names for cleaner event delegation
     const row = `
       <tr>
-        <td>${data.complaintId}</td>
+        <td>${index++}</td>
         <td>${data.title}</td>
         <td>${data.category}</td>
         <td>${data.location}</td>
@@ -109,6 +111,13 @@ table.addEventListener("click", async (e) => {
         const ref = doc(db, "complaints", id);
         await deleteDoc(ref);
         e.target.closest("tr").remove(); // Optically remove row
+        
+        // Re-index remaining rows so numbering stays contiguous starting from 1
+        const remainingRows = document.querySelectorAll("#complaintTable tr");
+        remainingRows.forEach((row, index) => {
+          row.querySelector("td:first-child").textContent = index + 1;
+        });
+
         alert("Complaint deleted successfully.");
       } catch (error) {
         console.error("Error deleting document: ", error);

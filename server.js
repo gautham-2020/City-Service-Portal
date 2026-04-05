@@ -1,23 +1,41 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
 const app = express();
-const port = 3000;
+const PORT = process.env.PORT || 3000;
 
-// Initialize Nodemailer transporter with Gmail
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
+console.log(">>> BOOTING SERVER...");
+
+// 1. GLOBAL CORS & PREFLIGHT HANDLER (Immediate response)
+app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+    res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type, Authorization');
+    res.setHeader('Access-Control-Allow-Credentials', true);
+    
+    if (req.method === 'OPTIONS') {
+        return res.status(204).send();
     }
+    next();
 });
 
-// Middleware
-app.use(cors());
+// 2. Serve static files (Frontend)
+app.use(express.static(__dirname));
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+    console.log(">>> Health check hit!");
+    res.status(200).send('City Service Portal works!');
+});
+
+// 3. Middlewares
 app.use(express.json());
+app.use(cors());
+
+// Initialize Resend
+const resend = new Resend(process.env.RESEND_API_KEY || 're_SEfpiMZV_AKoKFev5jWHA2qutgy4uLYLi');
 
 // Endpoint to send emails
 app.post('/send-email', async (req, res) => {
@@ -40,18 +58,14 @@ app.post('/send-email', async (req, res) => {
         targetEmail = 'roadtests12@gmail.com, ' + toEmail;
         intendedDepartment = 'roadtests12@gmail.com (Road Department)';
         subjectPrefix = 'Urgent: Road Damage Alert';
-    } else if (category === 'Electricity') {
-        targetEmail = 'electricitytest12@gmail.com, ' + toEmail;
-        intendedDepartment = 'electricitytest12@gmail.com (Electricity Department)';
+    } else {
+        targetEmail = 'electrictytest12@gmail.com, ' + toEmail;
+        intendedDepartment = 'electrictytest12@gmail.com (Electricity Department)';
         subjectPrefix = 'Urgent: Power/Electricity Fault';
     }
 
     try {
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: targetEmail,
-            subject: `${subjectPrefix} - #${complaintId} (${title})`,
-            html: `
+        const emailContent = `
                 <div style="font-family: 'Poppins', sans-serif; background: linear-gradient(135deg, #1e003b, #07030e, #8e2de2); padding: 40px; color: #ffffff;">
                     <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 40px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3); max-width: 600px; margin: 0 auto; color: #ffffff;">
                         <h2 style="text-align: center; color: #00d2ff; margin-top: 0; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);">City Service Portal</h2>
@@ -103,18 +117,28 @@ app.post('/send-email', async (req, res) => {
                         <p style="margin-top: 30px; font-size: 14px; text-align: center; color: rgba(255,255,255,0.6);">Thank you for helping us serve the city better.</p>
                     </div>
                 </div>
-            `,
-        };
+            `;
 
-        const info = await transporter.sendMail(mailOptions);
+        const { data, error } = await resend.emails.send({
+            from: 'CityPortal <onboarding@resend.dev>',
+            to: targetEmail.split(',').map(e => e.trim()),
+            subject: `${subjectPrefix} - #${complaintId} (${title})`,
+            html: emailContent,
+        });
 
-        res.status(200).json({ success: true, info });
+        if (error) {
+            console.error('Resend Error:', error);
+            const errorMessage = error.message || (typeof error === 'string' ? error : JSON.stringify(error));
+            return res.status(500).json({ error: errorMessage });
+        }
+
+        res.status(200).json({ success: true, data });
     } catch (error) {
-        console.error('Error sending email:', error);
-        res.status(500).json({ error: 'Failed to send email' });
+        console.error('Unexpected Internal Error:', error);
+        res.status(500).json({ error: `Internal Server Error: ${error.message}` });
     }
 });
 
-app.listen(port, () => {
-    console.log(`Backend server listening at http://localhost:${port}`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Backend server is running on port ${PORT}`);
 });
