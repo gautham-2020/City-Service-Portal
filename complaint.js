@@ -30,9 +30,7 @@ const form = document.getElementById("complaintForm");
 const complaintTableBody = document.getElementById("my-complaints-list");
 
 let unsubscribeComplaints = null;
-const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? 'http://localhost:3000'
-  : 'https://my-backend-production-31b5.up.railway.app';
+const BACKEND_URL = window.location.origin;
 
 // Submission Logic
 if (form) {
